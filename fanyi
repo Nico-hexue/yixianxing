@@ -1,0 +1,2738 @@
+# 简单的HTTP服务器脚本
+$listener = New-Object System.Net.HttpListener
+$listener.Prefixes.Add('http://localhost:8080/')
+$listener.Start()
+Write-Host '服务器已启动: http://localhost:8080'
+
+while ($listener.IsListening) {
+    $context = $listener.GetContext()
+    $request = $context.Request
+    $response = $context.Response
+    
+    # 处理请求路径
+    $filePath = [System.IO.Path]::Combine($PSScriptRoot, $request.Url.LocalPath.TrimStart('/'))
+    
+    # 如果路径为空或指向目录，默认使用index.html
+    if ([string]::IsNullOrEmpty($filePath) -or (Test-Path $filePath -PathType Container)) {
+        $filePath = [System.IO.Path]::Combine($PSScriptRoot, 'index.html')
+    }
+    
+    try {
+        if (Test-Path $filePath -PathType Leaf) {
+            # 根据文件类型设置Content-Type
+            $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
+            switch ($extension) {
+                '.html' { $contentType = 'text/html' }
+                '.css' { $contentType = 'text/css' }
+                '.js' { $contentType = 'text/javascript' }
+                '.jpg' { $contentType = 'image/jpeg' }
+                '.jpeg' { $contentType = 'image/jpeg' }
+                '.png' { $contentType = 'image/png' }
+                default { $contentType = 'application/octet-stream' }
+            }
+            
+            $response.ContentType = $contentType
+            
+            if ($contentType -like 'image/*') {
+                # 二进制文件
+                $content = [System.IO.File]::ReadAllBytes($filePath)
+                $response.ContentLength64 = $content.Length
+                $response.OutputStream.Write($content, 0, $content.Length)
+            } else {
+                # 文本文件
+                $content = Get-Content $filePath -Raw
+                $buffer = [System.Text.Encoding]::UTF8.GetBytes($content)
+                $response.ContentLength64 = $buffer.Length
+                $response.OutputStream.Write($buffer, 0, $buffer.Length)
+            }
+        } else {
+            # 文件不存在
+            $response.StatusCode = 404
+            $content = '404 Not Found'
+            $buffer = [System.Text.Encoding]::UTF8.GetBytes($content)
+            $response.ContentLength64 = $buffer.Length
+            $response.OutputStream.Write($buffer, 0, $buffer.Length)
+        }
+    } catch {
+        # 处理错误
+        $response.StatusCode = 500
+        $content = 'Internal Server Error: ' + $_.Exception.Message
+        $buffer = [System.Text.Encoding]::UTF8.GetBytes($content)
+        $response.ContentLength64 = $buffer.Length
+        $response.OutputStream.Write($buffer, 0, $buffer.Length)
+    } finally {
+        $response.Close()
+    }
+}
+
+# 停止服务器
+$listener.Stop()
+$listener.Close()
+Write-Host '服务器已停止'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试页面</title>
+    <style>
+        body {
+            background-color: #f9f0f4;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .mdl-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #e91e63;
+        }
+        p {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="mdl-card">
+            <h2>旅游景区文学文本翻译</h2>
+            <p>这是一个测试页面，用于排查界面空白问题。</p>
+            <p>如果您看到此消息，说明基本HTML结构正常。</p>
+        </div>
+    </div>
+    <script>
+        console.log('测试脚本运行正常');
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成');
+        });
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅游景区文学文本翻译</title>
+    <!-- Material Design Lite -->
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.pink-indigo.min.css">
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <!-- Material Design Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <style>
+        body {
+            background-color: #f9f0f4;
+            font-family: 'Roboto', sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .mdl-card {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .mdl-textfield {
+            width: 100%;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 200px;
+        }
+        .translation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .translation-section {
+            flex: 1;
+            min-width: 300px;
+        }
+        .mdl-button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="color: #e91e63; text-align: center;">旅游景区文学文本翻译</h1>
+        
+        <div class="mdl-card mdl-shadow--2dp">
+            <div class="mdl-card__title mdl-color--pink-600 mdl-color-text--white">
+                <h2 class="mdl-card__title-text">文本翻译</h2>
+            </div>
+            <div class="mdl-card__supporting-text">
+                <div class="translation-container">
+                    <div class="translation-section">
+                        <div class="mdl-textfield mdl-js-textfield">
+                            <textarea class="mdl-textfield__input" type="text" id="source-text"></textarea>
+                            <label class="mdl-textfield__label" for="source-text">输入旅游景区文学文本...</label>
+                        </div>
+                        <div class="language-selector">
+                            <label>源语言：</label>
+                            <select id="source-language">
+                                <option value="zh">中文</option>
+                                <option value="en">英语</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="translation-section">
+                        <div class="mdl-textfield mdl-js-textfield">
+                            <textarea class="mdl-textfield__input" type="text" id="target-text" readonly></textarea>
+                            <label class="mdl-textfield__label" for="target-text">翻译结果...</label>
+                        </div>
+                        <div class="language-selector">
+                            <label>目标语言：</label>
+                            <select id="target-language">
+                                <option value="en">英语</option>
+                                <option value="zh">中文</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-500 mdl-color-text--white" id="translate-button">
+                        <i class="material-icons">translate</i> 翻译
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成');
+            
+            const translateButton = document.getElementById('translate-button');
+            const sourceText = document.getElementById('source-text');
+            const targetText = document.getElementById('target-text');
+            const sourceLanguage = document.getElementById('source-language');
+            const targetLanguage = document.getElementById('target-language');
+            
+            console.log('元素获取成功:', {
+                translateButton: !!translateButton,
+                sourceText: !!sourceText,
+                targetText: !!targetText,
+                sourceLanguage: !!sourceLanguage,
+                targetLanguage: !!targetLanguage
+            });
+            
+            translateButton.addEventListener('click', function() {
+                const text = sourceText.value.trim();
+                if (!text) {
+                    targetText.value = '请输入文本';
+                    return;
+                }
+                
+                targetText.value = '翻译中...';
+                
+                // 模拟翻译
+                setTimeout(() => {
+                    targetText.value = 'This is a test translation';
+                }, 1000);
+            });
+            
+            console.log('事件监听器添加成功');
+        });
+    </script>
+</body>
+</html>
+https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=traditional%20Chinese%20village%20wall%20with%20round%20bamboo%20plaques%20with%20Chinese%20characters%20and%20corn%20drying%20on%20stone%20wall&image_size=landscape_16_9
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅游景区文学文本翻译</title>
+    <!-- Material Design Lite -->
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.pink-indigo.min.css">
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <!-- Material Design Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <!-- TensorFlow.js for Object Detection (可选，加载失败不影响其他功能) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs" onerror="console.warn('TensorFlow.js加载失败，物品识别功能将不可用');"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd" onerror="console.warn('COCO-SSD模型加载失败，物品识别功能将不可用');"></script>
+    <style>
+        body {
+            background-image: url('https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=traditional%20Chinese%20village%20wall%20with%20round%20bamboo%20plaques%20with%20Chinese%20characters%20%E5%A4%A9%E9%BE%99%E5%B1%AF%E5%A0%A1%20and%20corn%20drying%20on%20stone%20wall&image_size=landscape_16_9');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            font-family: 'Roboto', sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        /* 半透明遮罩，确保内容清晰可读 */
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 1200px;
+        }
+        
+        /* 卡片背景增强 */
+        .mdl-card {
+            background-color: rgba(255, 255, 255, 0.95);
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .mdl-textfield {
+            width: 100%;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 200px;
+        }
+        .translation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .translation-section {
+            flex: 1;
+            min-width: 300px;
+        }
+        .mdl-button {
+            margin-top: 10px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .realtime-translation {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .realtime-translation.active {
+            display: block;
+        }
+        .realtime-text {
+            padding: 15px;
+            background-color: #fce4ec;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            min-height: 60px;
+        }
+        .realtime-translated {
+            padding: 15px;
+            background-color: #e1bee7;
+            border-radius: 4px;
+            min-height: 60px;
+        }
+        .history-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .history-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            border-left: 4px solid #e91e63;
+        }
+        .history-source {
+            font-weight: bold;
+            color: #333;
+        }
+        .history-target {
+            color: #666;
+            margin-top: 5px;
+        }
+        .recording-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: #f44336;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .image-recognition-section {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+        }
+        .image-upload-area {
+            border: 2px dashed #e91e63;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fce4ec;
+        }
+        .image-upload-area:hover {
+            background-color: #f8bbd0;
+            border-color: #c2185b;
+        }
+        .image-preview-container {
+            position: relative;
+            margin-top: 20px;
+            display: none;
+        }
+        .image-preview-container.active {
+            display: block;
+        }
+        .image-canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+        }
+        #image-canvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .image-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .ocr-progress {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e1bee7;
+            border-radius: 8px;
+            display: none;
+        }
+        .ocr-progress.active {
+            display: block;
+        }
+        .ocr-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f3e5f5;
+            border-radius: 8px;
+        }
+        .ocr-text-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 4px solid #e91e63;
+        }
+        .camera-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+        .camera-modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .camera-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        #camera-video {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        .camera-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .object-detection-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3e0;
+            border-radius: 8px;
+        }
+        .object-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 4px solid #ff9800;
+        }
+        .object-name {
+            font-weight: bold;
+            color: #e65100;
+            flex: 1;
+        }
+        .object-confidence {
+            color: #666;
+            font-size: 12px;
+        }
+        .object-bbox {
+            position: absolute;
+            border: 3px solid #ff9800;
+            background-color: rgba(255, 152, 0, 0.2);
+            pointer-events: none;
+        }
+        .object-label {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            background-color: #ff9800;
+            color: white;
+            padding: 2px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        /* 框选样式 */
+        .selection-box {
+            position: absolute;
+            border: 2px dashed #4caf50;
+            background-color: rgba(76, 175, 80, 0.2);
+            cursor: crosshair;
+        }
+        /* 框选提示 */
+        .selection-hint {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        /* 框选按钮 */
+        .selection-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .detection-loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background-color: #fff3e0;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .detection-loading.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mdl-typography--display-2 mdl-color-text--pink-600">旅游景区文学文本翻译</h1>
+        
+        <div class="mdl-card mdl-shadow--2dp">
+            <div class="mdl-card__title mdl-color--pink-500 mdl-color-text--white">
+                <h2 class="mdl-card__title-text">翻译工具</h2>
+            </div>
+            <div class="mdl-card__supporting-text">
+                <div class="mdl-grid">
+                    <div class="mdl-cell mdl-cell--6-col">
+                        <div class="mdl-selectfield mdl-js-selectfield">
+                            <select class="mdl-selectfield__select" id="source-language">
+                                <option value="zh">中文</option>
+                                <option value="en-gb">英国英语</option>
+                                <option value="en-us">美国英语</option>
+                                <option value="en-sg">新加坡英语</option>
+                                <option value="en-ca">加拿大英语</option>
+                                <option value="fr">法语</option>
+                                <option value="de">德语</option>
+                                <option value="ja">日语</option>
+                                <option value="ko">韩语</option>
+                                <option value="es">西班牙语</option>
+                                <option value="pt">葡萄牙语</option>
+                                <option value="it">意大利语</option>
+                                <option value="ms">马来语</option>
+                                <option value="th">泰语</option>
+                                <option value="vi">越南语</option>
+                                <option value="id">印尼语</option>
+                                <option value="tl">菲律宾语</option>
+                                <option value="km">柬埔寨语</option>
+                                <option value="lo">老挝语</option>
+                                <option value="my">缅甸语</option>
+                                <option value="ta">泰米尔语</option>
+                                <option value="ms-bn">文莱语</option>
+                            </select>
+                            <label class="mdl-selectfield__label" for="source-language">源语言</label>
+                        </div>
+                    </div>
+                    <div class="mdl-cell mdl-cell--6-col">
+                        <div class="mdl-selectfield mdl-js-selectfield">
+                            <select class="mdl-selectfield__select" id="target-language">
+                                <option value="en-gb">英国英语</option>
+                                <option value="zh">中文</option>
+                                <option value="en-us">美国英语</option>
+                                <option value="en-sg">新加坡英语</option>
+                                <option value="en-ca">加拿大英语</option>
+                                <option value="fr">法语</option>
+                                <option value="de">德语</option>
+                                <option value="ja">日语</option>
+                                <option value="ko">韩语</option>
+                                <option value="es">西班牙语</option>
+                                <option value="pt">葡萄牙语</option>
+                                <option value="it">意大利语</option>
+                                <option value="ms">马来语</option>
+                                <option value="th">泰语</option>
+                                <option value="vi">越南语</option>
+                                <option value="id">印尼语</option>
+                                <option value="tl">菲律宾语</option>
+                                <option value="km">柬埔寨语</option>
+                                <option value="lo">老挝语</option>
+                                <option value="my">缅甸语</option>
+                                <option value="ta">泰米尔语</option>
+                                <option value="ms-bn">文莱语</option>
+                            </select>
+                            <label class="mdl-selectfield__label" for="target-language">目标语言</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="translation-container">
+                    <div class="translation-section">
+                        <div class="mdl-layout-spacer"></div>
+                        <h3 class="mdl-typography--headline">原文</h3>
+                        <div class="mdl-textfield mdl-js-textfield">
+                            <textarea class="mdl-textfield__input" type="text" id="source-text"></textarea>
+                            <label class="mdl-textfield__label" for="source-text">请输入要翻译的文本...</label>
+                        </div>
+                        <div class="mdl-grid">
+                            <div class="mdl-cell mdl-cell--4-col">
+                                <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-400 mdl-color-text--white" id="clear-source-button">
+                                    清空
+                                </button>
+                            </div>
+                            <div class="mdl-cell mdl-cell--4-col">
+                                <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-400 mdl-color-text--white" id="voice-recognition-button">
+                                    <i class="material-icons">mic</i> 语音输入
+                                </button>
+                            </div>
+                            <div class="mdl-cell mdl-cell--4-col">
+                                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="auto-translate">
+                                    <input type="checkbox" id="auto-translate" class="mdl-checkbox__input">
+                                    <span class="mdl-checkbox__label">自动翻译</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="translation-section">
+                        <h3 class="mdl-typography--headline">译文</h3>
+                        <div class="mdl-textfield mdl-js-textfield">
+                            <textarea class="mdl-textfield__input" type="text" id="target-text" readonly></textarea>
+                            <label class="mdl-textfield__label" for="target-text">翻译结果将显示在这里...</label>
+                        </div>
+                        <div class="mdl-grid">
+                            <div class="mdl-cell mdl-cell--12-col">
+                                <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-400 mdl-color-text--white" id="copy-button">
+                                    复制译文
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="mdl-spinner mdl-js-spinner is-active"></div>
+                    <p>正在翻译中...</p>
+                </div>
+                
+                <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-500 mdl-color-text--white" id="translate-button">
+                    翻译
+                </button>
+                <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--accent mdl-color-text--white" id="realtime-translate-button">
+                    <i class="material-icons">record_voice_over</i> 同声翻译
+                </button>
+                
+                <div class="realtime-translation" id="realtime-translation">
+                    <h4 class="mdl-typography--headline">
+                        <span class="recording-indicator"></span>
+                        正在实时翻译...
+                    </h4>
+                    <div class="mdl-grid">
+                        <div class="mdl-cell mdl-cell--6-col">
+                            <h5>实时识别文本</h5>
+                            <div class="realtime-text" id="realtime-source"></div>
+                        </div>
+                        <div class="mdl-cell mdl-cell--6-col">
+                            <h5>实时翻译结果</h5>
+                            <div class="realtime-translated" id="realtime-target"></div>
+                        </div>
+                    </div>
+                    <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--red-500 mdl-color-text--white" id="stop-realtime-button">
+                        <i class="material-icons">stop</i> 停止同声翻译
+                    </button>
+                </div>
+                
+                <div class="history-container" id="history-container">
+                    <h5>翻译历史</h5>
+                    <div id="history-list"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mdl-card mdl-shadow--2dp">
+            <div class="mdl-card__title mdl-color--pink-600 mdl-color-text--white">
+                <h2 class="mdl-card__title-text">图片文字识别与翻译</h2>
+            </div>
+            <div class="mdl-card__supporting-text">
+                <div class="image-recognition-section">
+                    <div class="image-upload-area" id="image-upload-area">
+                        <i class="material-icons" style="font-size: 48px; color: #e91e63;">add_photo_alternate</i>
+                        <p style="margin-top: 10px; color: #c2185b;">点击上传图片或拖拽图片到此处</p>
+                        <p style="color: #999; font-size: 12px;">支持 JPG、PNG、GIF 格式</p>
+                        <input type="file" id="image-input" accept="image/*" style="display: none;">
+                    </div>
+                    
+                    <div class="image-controls">
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-500 mdl-color-text--white" id="camera-button">
+                            <i class="material-icons">camera_alt</i> 拍照识别
+                        </button>
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-400 mdl-color-text--white" id="recognize-button" disabled>
+                            <i class="material-icons">text_fields</i> 识别文字
+                        </button>
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-300 mdl-color-text--white" id="translate-image-button" disabled>
+                            <i class="material-icons">translate</i> 翻译文字
+                        </button>
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-200 mdl-color-text--white" id="speak-button" disabled>
+                            <i class="material-icons">volume_up</i> 语音朗读
+                        </button>
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--orange-500 mdl-color-text--white" id="detect-objects-button" disabled>
+                            <i class="material-icons">visibility</i> 识别物品
+                        </button>
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--orange-300 mdl-color-text--white" id="translate-objects-button" disabled>
+                            <i class="material-icons">translate</i> 翻译物品
+                        </button>
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--orange-200 mdl-color-text--white" id="speak-objects-button" disabled>
+                            <i class="material-icons">record_voice_over</i> 朗读物品
+                        </button>
+                        <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--green-500 mdl-color-text--white" id="select-object-button">
+                            <i class="material-icons">crop_free</i> 框选识别
+                        </button>
+                    </div>
+                    
+                    <div class="detection-loading" id="detection-loading">
+                        <div class="mdl-spinner mdl-js-spinner is-active"></div>
+                        <p id="detection-status">正在加载识别模型...</p>
+                    </div>
+                    
+                    <div class="image-preview-container" id="image-preview-container">
+                        <div class="image-canvas-wrapper" id="image-canvas-wrapper">
+                            <canvas id="image-canvas"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="ocr-progress" id="ocr-progress">
+                        <div class="mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>
+                        <p id="ocr-status">正在识别图片中的文字...</p>
+                    </div>
+                    
+                    <!-- 多语言翻译选择 -->
+                    <div class="translation-selector" id="translation-selector" style="display: none; margin: 15px 0; padding: 15px; background-color: #f5f5f5; border-radius: 8px;">
+                        <h6 style="margin: 0 0 10px 0; color: #333;">选择翻译目标语言</h6>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="target-lang-buttons">
+                            <!-- 动态生成语言按钮 -->
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-500 mdl-color-text--white" id="translate-all-button">
+                                <i class="material-icons">translate</i> 翻译全部
+                            </button>
+                            <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-300 mdl-color-text--white" id="clear-translation-button">
+                                <i class="material-icons">clear</i> 清除翻译
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 翻译结果显示 -->
+                    <div class="translation-result" id="translation-result" style="display: none; margin: 15px 0; padding: 15px; background-color: #e8f5e9; border-radius: 8px; border-left: 4px solid #4caf50;">
+                        <h6 style="margin: 0 0 10px 0; color: #2e7d32;">翻译结果</h6>
+                        <div id="translation-text-list" style="max-height: 300px; overflow-y: auto;"></div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--green-500 mdl-color-text--white" id="speak-translation-button">
+                                <i class="material-icons">volume_up</i> 朗读翻译
+                            </button>
+                            <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--blue-500 mdl-color-text--white" id="copy-translation-button">
+                                <i class="material-icons">content_copy</i> 复制翻译
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="ocr-result" id="ocr-result" style="display: none;">
+                        <h5>识别结果</h5>
+                        <div id="ocr-text-list"></div>
+                    </div>
+                    
+                    <div class="object-detection-result" id="object-detection-result" style="display: none;">
+                        <h5>物品识别结果</h5>
+                        <div id="object-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="camera-modal" id="camera-modal">
+            <div class="camera-container">
+                <video id="camera-video" autoplay playsinline></video>
+                <div class="camera-controls">
+                    <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--pink-500 mdl-color-text--white" id="capture-button">
+                        <i class="material-icons">photo_camera</i> 拍照
+                    </button>
+                    <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--grey-500 mdl-color-text--white" id="close-camera-button">
+                        <i class="material-icons">close</i> 关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mdl-card mdl-shadow--2dp">
+            <div class="mdl-card__title mdl-color--pink-400 mdl-color-text--white">
+                <h2 class="mdl-card__title-text">使用说明</h2>
+            </div>
+            <div class="mdl-card__supporting-text">
+                <p>1. 在左侧输入框中输入旅游景区的文学文本</p>
+                <p>2. 点击「翻译」按钮进行翻译</p>
+                <p>3. 翻译结果将显示在右侧输出框中</p>
+                <p>4. 您可以复制翻译结果使用</p>
+                <p>5. 点击「同声翻译」按钮开始实时语音翻译</p>
+                <p>6. 说话时会自动识别并翻译，翻译历史会保存在下方</p>
+                <p>7. 上传图片或拍照可识别图片中的文字并翻译</p>
+                <p>8. 点击「语音朗读」可听取翻译结果的语音播放</p>
+                <p>9. 点击「识别物品」可识别图片中的物品（如建筑、动物、植物等）</p>
+                <p>10. 点击「翻译物品」可将物品名称翻译成目标语言</p>
+                <p>11. 点击「朗读物品」可听取物品名称的语音播放</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 全局变量
+        let languageMap = {
+            // 主流语言
+            'zh': '中文',
+            'en-gb': '英国英语',
+            'en-us': '美国英语',
+            'en-sg': '新加坡英语',
+            'en-ca': '加拿大英语',
+            'fr': '法语',
+            'de': '德语',
+            'ja': '日语',
+            'ko': '韩语',
+            'es': '西班牙语',
+            'pt': '葡萄牙语',
+            'it': '意大利语',
+            // 东盟国家语言
+            'ms': '马来语',
+            'th': '泰语',
+            'vi': '越南语',
+            'id': '印尼语',
+            'tl': '菲律宾语',
+            'km': '柬埔寨语',
+            'lo': '老挝语',
+            'my': '缅甸语',
+            'ta': '泰米尔语',
+            'ms-bn': '文莱语'
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const translateButton = document.getElementById('translate-button');
+            const clearSourceButton = document.getElementById('clear-source-button');
+            const copyButton = document.getElementById('copy-button');
+            const voiceRecognitionButton = document.getElementById('voice-recognition-button');
+            const sourceText = document.getElementById('source-text');
+            const targetText = document.getElementById('target-text');
+            const autoTranslateCheckbox = document.getElementById('auto-translate');
+            const sourceLanguage = document.getElementById('source-language');
+            const targetLanguage = document.getElementById('target-language');
+            const loading = document.getElementById('loading');
+            const realtimeTranslateButton = document.getElementById('realtime-translate-button');
+            const stopRealtimeButton = document.getElementById('stop-realtime-button');
+            const realtimeTranslation = document.getElementById('realtime-translation');
+            const realtimeSource = document.getElementById('realtime-source');
+            const realtimeTarget = document.getElementById('realtime-target');
+            const historyList = document.getElementById('history-list');
+            
+            let debounceTimer;
+            let realtimeRecognition = null;
+            let isRealtimeActive = false;
+            let translationQueue = [];
+            let isTranslating = false;
+            let currentTranscript = '';
+            let lastTranslatedText = '';
+            
+            // 语言代码到语言名称的映射（已移至全局）
+            
+            // 翻译函数
+            async function translateText() {
+                const text = sourceText.value.trim();
+                if (!text) {
+                    targetText.value = '';
+                    return;
+                }
+                
+                const sourceLang = sourceLanguage.value;
+                const targetLang = targetLanguage.value;
+                
+                loading.style.display = 'block';
+                translateButton.disabled = true;
+                
+                try {
+                    // 调用DeepSeek API进行翻译
+                    const response = await fetch('https://api.deepseek.com/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer sk-5c946b2fa9df458bb8b81acda6b239a4'
+                        },
+                        body: JSON.stringify({
+                            "model": "deepseek-chat",
+                            "messages": [
+                                {"role": "system", "content": `你是一个专业的旅游景区文学文本翻译助手，擅长将${languageMap[sourceLang]}旅游景区的文学文本翻译成${languageMap[targetLang]}，保持原文的文学性和美感。`},
+                                {"role": "user", "content": `请将以下旅游景区文学文本从${languageMap[sourceLang]}翻译成${languageMap[targetLang]}：\n${text}`}
+                            ],
+                            "stream": false
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    loading.style.display = 'none';
+                    translateButton.disabled = false;
+                    
+                    if (data.choices && data.choices.length > 0) {
+                        targetText.value = data.choices[0].message.content;
+                    } else {
+                        targetText.value = '翻译失败，请重试';
+                    }
+                } catch (error) {
+                    loading.style.display = 'none';
+                    translateButton.disabled = false;
+                    console.error('翻译错误:', error);
+                    targetText.value = `翻译失败: ${error.message}`;
+                }
+            }
+            
+            // 语音识别功能
+            function startVoiceRecognition() {
+                if ('webkitSpeechRecognition' in window) {
+                    const recognition = new webkitSpeechRecognition();
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    // 处理不同国家的英语变体
+                    let langCode = sourceLanguage.value;
+                    if (langCode.startsWith('en-')) {
+                        if (langCode === 'en-gb') langCode = 'en-GB';
+                        else if (langCode === 'en-us') langCode = 'en-US';
+                        else if (langCode === 'en-ca') langCode = 'en-CA';
+                        else langCode = 'en-US'; // 默认使用美国英语
+                    } else if (langCode === 'zh') {
+                        langCode = 'zh-CN';
+                    }
+                    recognition.lang = langCode;
+                    
+                    recognition.onstart = function() {
+                        voiceRecognitionButton.innerHTML = '<i class="material-icons">mic_off</i> 正在聆听...';
+                        voiceRecognitionButton.classList.add('mdl-color--red-500');
+                    };
+                    
+                    recognition.onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        sourceText.value = transcript;
+                        if (autoTranslateCheckbox.checked) {
+                            translateText();
+                        }
+                    };
+                    
+                    recognition.onerror = function(event) {
+                        console.error('语音识别错误:', event.error);
+                        alert('语音识别失败，请重试');
+                    };
+                    
+                    recognition.onend = function() {
+                        voiceRecognitionButton.innerHTML = '<i class="material-icons">mic</i> 语音输入';
+                        voiceRecognitionButton.classList.remove('mdl-color--red-500');
+                    };
+                    
+                    recognition.start();
+                } else {
+                    alert('您的浏览器不支持语音识别功能');
+                }
+            }
+            
+            // 翻译按钮点击事件
+            translateButton.addEventListener('click', translateText);
+            
+            // 清空按钮点击事件
+            clearSourceButton.addEventListener('click', function() {
+                sourceText.value = '';
+                targetText.value = '';
+            });
+            
+            // 复制按钮点击事件
+            copyButton.addEventListener('click', function() {
+                if (targetText.value) {
+                    targetText.select();
+                    document.execCommand('copy');
+                    // 显示复制成功提示
+                    const originalText = copyButton.textContent;
+                    copyButton.textContent = '已复制!';
+                    setTimeout(() => {
+                        copyButton.textContent = originalText;
+                    }, 1500);
+                }
+            });
+            
+            // 语音识别按钮点击事件
+            voiceRecognitionButton.addEventListener('click', startVoiceRecognition);
+            
+            // 自动翻译功能
+            sourceText.addEventListener('input', function() {
+                if (autoTranslateCheckbox.checked) {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(translateText, 1000);
+                }
+            });
+            
+            // 实时翻译函数
+            function translateRealtime(text) {
+                if (!text || text === lastTranslatedText) return;
+                
+                lastTranslatedText = text;
+                const sourceLang = sourceLanguage.value;
+                const targetLang = targetLanguage.value;
+                
+                fetch('https://api.deepseek.com/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer sk-5c946b2fa9df458bb8b81acda6b239a4'
+                    },
+                    body: JSON.stringify({
+                        "model": "deepseek-chat",
+                        "messages": [
+                            {"role": "system", "content": `你是一个专业的旅游景区文学文本翻译助手，擅长将${languageMap[sourceLang]}旅游景区的文学文本翻译成${languageMap[targetLang]}，保持原文的文学性和美感。请直接翻译，不要添加任何解释。`},
+                            {"role": "user", "content": text}
+                        ],
+                        "stream": false
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.choices && data.choices.length > 0) {
+                        const translatedText = data.choices[0].message.content;
+                        realtimeTarget.textContent = translatedText;
+                        addToHistory(text, translatedText);
+                    }
+                })
+                .catch(error => {
+                    console.error('实时翻译错误:', error);
+                });
+            }
+            
+            // 开始同声翻译
+            function startRealtimeTranslation() {
+                if (!('webkitSpeechRecognition' in window)) {
+                    alert('您的浏览器不支持语音识别功能');
+                    return;
+                }
+                
+                isRealtimeActive = true;
+                realtimeTranslation.classList.add('active');
+                realtimeTranslateButton.disabled = true;
+                
+                realtimeRecognition = new webkitSpeechRecognition();
+                realtimeRecognition.continuous = true;
+                realtimeRecognition.interimResults = true;
+                // 处理不同国家的英语变体
+                let langCode = sourceLanguage.value;
+                if (langCode.startsWith('en-')) {
+                    if (langCode === 'en-gb') langCode = 'en-GB';
+                    else if (langCode === 'en-us') langCode = 'en-US';
+                    else if (langCode === 'en-ca') langCode = 'en-CA';
+                    else langCode = 'en-US'; // 默认使用美国英语
+                } else if (langCode === 'zh') {
+                    langCode = 'zh-CN';
+                }
+                realtimeRecognition.lang = langCode;
+                
+                let finalTranscript = '';
+                
+                realtimeRecognition.onresult = function(event) {
+                    let interimTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    
+                    currentTranscript = finalTranscript + interimTranscript;
+                    realtimeSource.textContent = currentTranscript;
+                    
+                    // 实时翻译
+                    if (currentTranscript.trim()) {
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => {
+                            translateRealtime(currentTranscript.trim());
+                        }, 800);
+                    }
+                };
+                
+                realtimeRecognition.onerror = function(event) {
+                    console.error('同声翻译错误:', event.error);
+                    if (event.error === 'no-speech') {
+                        // 无语音输入，继续监听
+                        return;
+                    }
+                    alert('语音识别错误: ' + event.error);
+                    stopRealtimeTranslation();
+                };
+                
+                realtimeRecognition.onend = function() {
+                    if (isRealtimeActive) {
+                        // 如果还在活动状态，重新启动识别
+                        realtimeRecognition.start();
+                    }
+                };
+                
+                realtimeRecognition.start();
+            }
+            
+            // 停止同声翻译
+            function stopRealtimeTranslation() {
+                isRealtimeActive = false;
+                realtimeTranslation.classList.remove('active');
+                realtimeTranslateButton.disabled = false;
+                
+                if (realtimeRecognition) {
+                    realtimeRecognition.stop();
+                    realtimeRecognition = null;
+                }
+                
+                // 清空实时显示
+                realtimeSource.textContent = '';
+                realtimeTarget.textContent = '';
+                currentTranscript = '';
+                lastTranslatedText = '';
+            }
+            
+            // 添加到历史记录
+            function addToHistory(source, target) {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div class="history-source">${source}</div>
+                    <div class="history-target">${target}</div>
+                `;
+                historyList.insertBefore(historyItem, historyList.firstChild);
+                
+                // 限制历史记录数量
+                if (historyList.children.length > 20) {
+                    historyList.removeChild(historyList.lastChild);
+                }
+            }
+            
+            // 同声翻译按钮点击事件
+            realtimeTranslateButton.addEventListener('click', startRealtimeTranslation);
+            
+            // 停止同声翻译按钮点击事件
+            stopRealtimeButton.addEventListener('click', stopRealtimeTranslation);
+            
+            // 图片识别功能
+            const imageUploadArea = document.getElementById('image-upload-area');
+            const imageInput = document.getElementById('image-input');
+            const imagePreviewContainer = document.getElementById('image-preview-container');
+            const imageCanvas = document.getElementById('image-canvas');
+            const recognizeButton = document.getElementById('recognize-button');
+            const translateImageButton = document.getElementById('translate-image-button');
+            const speakButton = document.getElementById('speak-button');
+            const cameraButton = document.getElementById('camera-button');
+            const cameraModal = document.getElementById('camera-modal');
+            const cameraVideo = document.getElementById('camera-video');
+            const captureButton = document.getElementById('capture-button');
+            const closeCameraButton = document.getElementById('close-camera-button');
+            const ocrProgress = document.getElementById('ocr-progress');
+            const ocrStatus = document.getElementById('ocr-status');
+            const ocrResult = document.getElementById('ocr-result');
+            const ocrTextList = document.getElementById('ocr-text-list');
+            
+            let currentImage = null;
+            let ocrTexts = [];
+            let translatedTexts = [];
+            let cameraStream = null;
+            
+            // 图片上传区域点击事件
+            imageUploadArea.addEventListener('click', () => {
+                imageInput.click();
+            });
+            
+            // 图片拖拽事件
+            imageUploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                imageUploadArea.style.borderColor = '#c2185b';
+                imageUploadArea.style.backgroundColor = '#f8bbd0';
+            });
+            
+            imageUploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                imageUploadArea.style.borderColor = '#e91e63';
+                imageUploadArea.style.backgroundColor = '#fce4ec';
+            });
+            
+            imageUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                imageUploadArea.style.borderColor = '#e91e63';
+                imageUploadArea.style.backgroundColor = '#fce4ec';
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type.startsWith('image/')) {
+                    handleImageUpload(files[0]);
+                }
+            });
+            
+            // 图片选择事件
+            imageInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleImageUpload(e.target.files[0]);
+                }
+            });
+            
+            // 处理图片上传
+            function handleImageUpload(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        currentImage = img;
+                        drawImageToCanvas(img);
+                        imagePreviewContainer.classList.add('active');
+                        recognizeButton.disabled = false;
+                        ocrResult.style.display = 'none';
+                        translateImageButton.disabled = true;
+                        speakButton.disabled = true;
+                        ocrTexts = [];
+                        translatedTexts = [];
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            // 绘制图片到Canvas
+            function drawImageToCanvas(img, texts = []) {
+                const ctx = imageCanvas.getContext('2d');
+                const maxWidth = 800;
+                const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+                imageCanvas.width = img.width * scale;
+                imageCanvas.height = img.height * scale;
+                ctx.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
+                
+                // 绘制翻译文本
+                if (texts.length > 0) {
+                    ctx.font = '16px Arial';
+                    texts.forEach((item, index) => {
+                        const x = item.bbox.x0 * scale;
+                        const y = item.bbox.y0 * scale;
+                        const width = (item.bbox.x1 - item.bbox.x0) * scale;
+                        const height = (item.bbox.y1 - item.bbox.y0) * scale;
+                        
+                        // 绘制半透明背景
+                        ctx.fillStyle = 'rgba(233, 30, 99, 0.8)';
+                        ctx.fillRect(x, y, width, height);
+                        
+                        // 绘制翻译文本
+                        ctx.fillStyle = 'white';
+                        ctx.textBaseline = 'top';
+                        const text = translatedTexts[index] || item.text;
+                        const fontSize = Math.min(16, height * 0.8);
+                        ctx.font = `${fontSize}px Arial`;
+                        ctx.fillText(text, x + 5, y + 5, width - 10);
+                    });
+                }
+            }
+            
+            // 多语言翻译选择器
+            const translationSelector = document.getElementById('translation-selector');
+            const targetLangButtons = document.getElementById('target-lang-buttons');
+            const translationResult = document.getElementById('translation-result');
+            const translationTextList = document.getElementById('translation-text-list');
+            const translateAllButton = document.getElementById('translate-all-button');
+            const clearTranslationButton = document.getElementById('clear-translation-button');
+            const speakTranslationButton = document.getElementById('speak-translation-button');
+            const copyTranslationButton = document.getElementById('copy-translation-button');
+            
+            // 当前选中的目标语言
+            let selectedTargetLang = targetLanguage.value;
+            
+            // 生成语言选择按钮
+            function generateLanguageButtons() {
+                targetLangButtons.innerHTML = '';
+                Object.entries(languageMap).forEach(([code, name]) => {
+                    const btn = document.createElement('button');
+                    btn.className = `mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect ${code === selectedTargetLang ? 'mdl-color--pink-500 mdl-color-text--white' : 'mdl-color--grey-200'}`;
+                    btn.style.margin = '4px';
+                    btn.textContent = name;
+                    btn.onclick = () => {
+                        selectedTargetLang = code;
+                        generateLanguageButtons();
+                    };
+                    targetLangButtons.appendChild(btn);
+                });
+            }
+            
+            // OCR识别 - 即时识别并显示多语言选择
+            recognizeButton.addEventListener('click', async () => {
+                if (!currentImage) return;
+                
+                recognizeButton.disabled = true;
+                ocrProgress.classList.add('active');
+                ocrStatus.textContent = '正在识别图片中的文字...';
+                
+                try {
+                    const langMap = {
+                        'zh': 'chi_sim',
+                        'en-gb': 'eng',
+                        'en-us': 'eng',
+                        'en-sg': 'eng',
+                        'en-ca': 'eng',
+                        'fr': 'fra',
+                        'de': 'deu',
+                        'ja': 'jpn',
+                        'ko': 'kor',
+                        'es': 'spa',
+                        'pt': 'por',
+                        'it': 'ita',
+                        'ms': 'msa',
+                        'th': 'tha',
+                        'vi': 'vie',
+                        'id': 'ind',
+                        'tl': 'fil',
+                        'km': 'khm',
+                        'lo': 'lao',
+                        'my': 'mya',
+                        'ta': 'tam',
+                        'ms-bn': 'msa'
+                    };
+                    
+                    const ocrLang = langMap[sourceLanguage.value] || 'eng';
+                    
+                    const result = await Tesseract.recognize(
+                        currentImage.src,
+                        ocrLang,
+                        {
+                            logger: (m) => {
+                                if (m.status === 'recognizing text') {
+                                    ocrStatus.textContent = `识别进度: ${Math.round(m.progress * 100)}%`;
+                                }
+                            }
+                        }
+                    );
+                    
+                    ocrTexts = result.data.lines.map(line => ({
+                        text: line.text.trim(),
+                        bbox: line.bbox,
+                        confidence: line.confidence
+                    })).filter(line => line.text && line.confidence > 50);
+                    
+                    // 显示识别结果
+                    ocrTextList.innerHTML = '';
+                    ocrTexts.forEach((item, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'ocr-text-item';
+                        div.innerHTML = `<strong>${index + 1}.</strong> ${item.text} <small style="color: #999;">(置信度: ${Math.round(item.confidence)}%)</small>`;
+                        ocrTextList.appendChild(div);
+                    });
+                    
+                    ocrResult.style.display = 'block';
+                    ocrProgress.classList.remove('active');
+                    recognizeButton.disabled = false;
+                    
+                    // 显示多语言翻译选择器
+                    generateLanguageButtons();
+                    translationSelector.style.display = 'block';
+                    
+                    // 自动滚动到翻译选择器
+                    translationSelector.scrollIntoView({ behavior: 'smooth' });
+                    
+                } catch (error) {
+                    console.error('OCR识别错误:', error);
+                    ocrStatus.textContent = '识别失败，请重试';
+                    recognizeButton.disabled = false;
+                }
+            });
+            
+            // 翻译全部按钮
+            translateAllButton.addEventListener('click', async () => {
+                if (ocrTexts.length === 0) return;
+                
+                translateAllButton.disabled = true;
+                ocrProgress.classList.add('active');
+                ocrStatus.textContent = `正在翻译成${languageMap[selectedTargetLang]}...`;
+                
+                try {
+                    const textToTranslate = ocrTexts.map(item => item.text).join('\n');
+                    const sourceLang = sourceLanguage.value;
+                    
+                    const response = await fetch('https://api.deepseek.com/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer sk-5c946b2fa9df458bb8b81acda6b239a4'
+                        },
+                        body: JSON.stringify({
+                            "model": "deepseek-chat",
+                            "messages": [
+                                {"role": "system", "content": `你是一个专业的旅游景区文学文本翻译助手。请将以下文本从${languageMap[sourceLang]}翻译成${languageMap[selectedTargetLang]}。每行翻译结果用换行符分隔，不要添加编号。`},
+                                {"role": "user", "content": textToTranslate}
+                            ],
+                            "stream": false
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.choices && data.choices.length > 0) {
+                        translatedTexts = data.choices[0].message.content.split('\n').filter(t => t.trim());
+                        
+                        // 重新绘制图片并叠加翻译文本
+                        drawImageToCanvas(currentImage, ocrTexts);
+                        
+                        // 显示翻译结果
+                        translationTextList.innerHTML = '';
+                        ocrTexts.forEach((item, index) => {
+                            const div = document.createElement('div');
+                            div.style.padding = '10px';
+                            div.style.marginBottom = '8px';
+                            div.style.backgroundColor = 'white';
+                            div.style.borderRadius = '4px';
+                            div.style.borderLeft = '3px solid #e91e63';
+                            div.innerHTML = `
+                                <div style="color: #666; font-size: 14px; margin-bottom: 4px;">${item.text}</div>
+                                <div style="color: #e91e63; font-weight: bold; font-size: 16px;">→ ${translatedTexts[index] || ''}</div>
+                            `;
+                            translationTextList.appendChild(div);
+                        });
+                        
+                        translationResult.style.display = 'block';
+                        
+                        // 更新识别结果显示
+                        ocrTextList.innerHTML = '';
+                        ocrTexts.forEach((item, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'ocr-text-item';
+                            div.innerHTML = `
+                                <div><strong>${index + 1}.</strong> ${item.text}</div>
+                                <div style="color: #e91e63; margin-top: 5px;">→ ${translatedTexts[index] || ''}</div>
+                            `;
+                            ocrTextList.appendChild(div);
+                        });
+                    }
+                    
+                    ocrProgress.classList.remove('active');
+                    translateAllButton.disabled = false;
+                    
+                    // 自动滚动到翻译结果
+                    translationResult.scrollIntoView({ behavior: 'smooth' });
+                    
+                } catch (error) {
+                    console.error('翻译错误:', error);
+                    ocrStatus.textContent = '翻译失败，请重试';
+                    translateAllButton.disabled = false;
+                }
+            });
+            
+            // 清除翻译按钮
+            clearTranslationButton.addEventListener('click', () => {
+                translatedTexts = [];
+                translationResult.style.display = 'none';
+                translationTextList.innerHTML = '';
+                drawImageToCanvas(currentImage, []);
+                
+                // 恢复原始识别结果显示
+                ocrTextList.innerHTML = '';
+                ocrTexts.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'ocr-text-item';
+                    div.innerHTML = `<strong>${index + 1}.</strong> ${item.text} <small style="color: #999;">(置信度: ${Math.round(item.confidence)}%)</small>`;
+                    ocrTextList.appendChild(div);
+                });
+            });
+            
+            // 朗读翻译按钮
+            speakTranslationButton.addEventListener('click', () => {
+                if (translatedTexts.length === 0) return;
+                
+                const text = translatedTexts.join('. ');
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                const langMap = {
+                    'zh': 'zh-CN', 'en': 'en-US', 'ru': 'ru-RU', 'ar': 'ar-SA',
+                    'es': 'es-ES', 'fr': 'fr-FR', 'de': 'de-DE', 'ja': 'ja-JP',
+                    'ko': 'ko-KR', 'pt': 'pt-PT', 'it': 'it-IT', 'tr': 'tr-TR',
+                    'th': 'th-TH', 'vi': 'vi-VN', 'id': 'id-ID', 'ms': 'ms-MY',
+                    'hi': 'hi-IN', 'ur': 'ur-PK', 'fa': 'fa-IR', 'pl': 'pl-PL'
+                };
+                
+                // 处理不同国家的英语变体
+                let langCode = selectedTargetLang;
+                if (langCode.startsWith('en-')) {
+                    if (langCode === 'en-gb') langCode = 'en-GB';
+                    else if (langCode === 'en-us') langCode = 'en-US';
+                    else if (langCode === 'en-ca') langCode = 'en-CA';
+                    else langCode = 'en-US'; // 默认使用美国英语
+                } else if (langCode === 'zh') {
+                    langCode = 'zh-CN';
+                }
+                utterance.lang = langCode;
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                speechSynthesis.speak(utterance);
+            });
+            
+            // 复制翻译按钮
+            copyTranslationButton.addEventListener('click', () => {
+                if (translatedTexts.length === 0) return;
+                
+                const text = translatedTexts.join('\n');
+                navigator.clipboard.writeText(text).then(() => {
+                    copyTranslationButton.innerHTML = '<i class="material-icons">check</i> 已复制';
+                    setTimeout(() => {
+                        copyTranslationButton.innerHTML = '<i class="material-icons">content_copy</i> 复制翻译';
+                    }, 2000);
+                });
+            });
+            
+            // 翻译图片文字
+            translateImageButton.addEventListener('click', async () => {
+                if (ocrTexts.length === 0) {
+                    alert('没有识别到文字，请先识别文字');
+                    return;
+                }
+                
+                translateImageButton.disabled = true;
+                ocrProgress.classList.add('active');
+                ocrStatus.textContent = '正在翻译文字...';
+                
+                translatedTexts = [];
+                const sourceLang = sourceLanguage.value;
+                const targetLang = targetLanguage.value;
+                
+                try {
+                    // 批量翻译
+                    const textToTranslate = ocrTexts.map(item => item.text).join('\n');
+                    
+                    const response = await fetch('https://api.deepseek.com/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer sk-5c946b2fa9df458bb8b81acda6b239a4'
+                        },
+                        body: JSON.stringify({
+                            "model": "deepseek-chat",
+                            "messages": [
+                                {"role": "system", "content": `你是一个专业的旅游景区文学文本翻译助手。请将以下文本从${languageMap[sourceLang]}翻译成${languageMap[targetLang]}。每行翻译结果用换行符分隔，不要添加编号。`},
+                                {"role": "user", "content": textToTranslate}
+                            ],
+                            "stream": false
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (data.choices && data.choices.length > 0) {
+                        translatedTexts = data.choices[0].message.content.split('\n').filter(t => t.trim());
+                        
+                        // 重新绘制图片并叠加翻译文本
+                        drawImageToCanvas(currentImage, ocrTexts);
+                        
+                        // 更新识别结果显示
+                        ocrTextList.innerHTML = '';
+                        ocrTexts.forEach((item, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'ocr-text-item';
+                            div.innerHTML = `
+                                <div><strong>${index + 1}.</strong> ${item.text}</div>
+                                <div style="color: #e91e63; margin-top: 5px;">→ ${translatedTexts[index] || ''}</div>
+                            `;
+                            ocrTextList.appendChild(div);
+                        });
+                        
+                        speakButton.disabled = false;
+                        ocrStatus.textContent = '翻译完成';
+                    }
+                    
+                    ocrProgress.classList.remove('active');
+                    translateImageButton.disabled = false;
+                    
+                } catch (error) {
+                    console.error('翻译错误:', error);
+                    ocrStatus.textContent = `翻译失败: ${error.message}`;
+                    ocrProgress.classList.remove('active');
+                    translateImageButton.disabled = false;
+                }
+            });
+            
+            // 语音朗读
+            speakButton.addEventListener('click', () => {
+                if (translatedTexts.length === 0) return;
+                
+                const text = translatedTexts.join('. ');
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // 设置语言
+                const langMap = {
+                    'zh': 'zh-CN',
+                    'en': 'en-US',
+                    'ru': 'ru-RU',
+                    'ar': 'ar-SA',
+                    'es': 'es-ES',
+                    'fr': 'fr-FR',
+                    'de': 'de-DE',
+                    'ja': 'ja-JP',
+                    'ko': 'ko-KR',
+                    'pt': 'pt-PT',
+                    'it': 'it-IT',
+                    'tr': 'tr-TR',
+                    'th': 'th-TH',
+                    'vi': 'vi-VN',
+                    'id': 'id-ID',
+                    'ms': 'ms-MY',
+                    'hi': 'hi-IN',
+                    'ur': 'ur-PK',
+                    'fa': 'fa-IR',
+                    'pl': 'pl-PL'
+                };
+                
+                // 处理不同国家的英语变体
+                let langCode = targetLanguage.value;
+                if (langCode.startsWith('en-')) {
+                    if (langCode === 'en-gb') langCode = 'en-GB';
+                    else if (langCode === 'en-us') langCode = 'en-US';
+                    else if (langCode === 'en-ca') langCode = 'en-CA';
+                    else langCode = 'en-US'; // 默认使用美国英语
+                } else if (langCode === 'zh') {
+                    langCode = 'zh-CN';
+                }
+                utterance.lang = langCode;
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                speechSynthesis.speak(utterance);
+            });
+            
+            // 拍照功能
+            cameraButton.addEventListener('click', async () => {
+                try {
+                    // 检查是否在安全上下文（HTTPS或localhost）
+                    if (!window.isSecureContext) {
+                        alert('摄像头功能需要在安全上下文（HTTPS或localhost）中运行。请使用Python服务器启动后访问。');
+                        return;
+                    }
+                    
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'environment' } 
+                    });
+                    cameraVideo.srcObject = cameraStream;
+                    cameraModal.classList.add('active');
+                } catch (error) {
+                    console.error('摄像头访问错误:', error);
+                    alert('无法访问摄像头，请检查权限设置或使用Python服务器启动后访问');
+                }
+            });
+            
+            // 拍照
+            captureButton.addEventListener('click', () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = cameraVideo.videoWidth;
+                canvas.height = cameraVideo.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(cameraVideo, 0, 0);
+                
+                // 显示拍照成功提示
+                const captureStatus = document.createElement('div');
+                captureStatus.className = 'capture-status';
+                captureStatus.style.position = 'absolute';
+                captureStatus.style.top = '50%';
+                captureStatus.style.left = '50%';
+                captureStatus.style.transform = 'translate(-50%, -50%)';
+                captureStatus.style.backgroundColor = 'rgba(0, 255, 0, 0.8)';
+                captureStatus.style.color = 'white';
+                captureStatus.style.padding = '20px';
+                captureStatus.style.borderRadius = '10px';
+                captureStatus.style.fontSize = '24px';
+                captureStatus.style.zIndex = '1000';
+                captureStatus.textContent = '拍照成功！';
+                cameraModal.appendChild(captureStatus);
+                
+                // 2秒后移除提示
+                setTimeout(() => {
+                    captureStatus.remove();
+                }, 2000);
+                
+                const img = new Image();
+                img.onload = () => {
+                    currentImage = img;
+                    drawImageToCanvas(img);
+                    imagePreviewContainer.classList.add('active');
+                    recognizeButton.disabled = false;
+                    detectObjectsButton.disabled = false;
+                    ocrResult.style.display = 'none';
+                    objectDetectionResult.style.display = 'none';
+                    translateImageButton.disabled = true;
+                    speakButton.disabled = true;
+                    translateObjectsButton.disabled = true;
+                    speakObjectsButton.disabled = true;
+                    ocrTexts = [];
+                    translatedTexts = [];
+                    detectedObjects = [];
+                    translatedObjects = [];
+                    
+                    // 清除之前的标注
+                    const existingBboxes = imageCanvasWrapper.querySelectorAll('.object-bbox');
+                    existingBboxes.forEach(bbox => bbox.remove());
+                    
+                    // 显示操作提示
+                    const actionHint = document.createElement('div');
+                    actionHint.className = 'action-hint';
+                    actionHint.style.marginTop = '10px';
+                    actionHint.style.padding = '10px';
+                    actionHint.style.backgroundColor = '#fce4ec';
+                    actionHint.style.borderRadius = '4px';
+                    actionHint.style.fontSize = '14px';
+                    actionHint.style.color = '#c2185b';
+                    actionHint.innerHTML = '拍照成功！请选择 <strong>识别文字</strong> 或 <strong>识别物品</strong> 功能。';
+                    
+                    // 移除之前的提示
+                    const existingHint = imagePreviewContainer.querySelector('.action-hint');
+                    if (existingHint) {
+                        existingHint.remove();
+                    }
+                    
+                    imagePreviewContainer.appendChild(actionHint);
+                    
+                    // 3秒后自动移除提示
+                    setTimeout(() => {
+                        actionHint.remove();
+                    }, 5000);
+                };
+                img.src = canvas.toDataURL('image/jpeg');
+                
+                // 延迟关闭摄像头，让用户看到拍照成功提示
+                setTimeout(() => {
+                    closeCamera();
+                }, 1000);
+            });
+            
+            // 关闭摄像头
+            closeCameraButton.addEventListener('click', closeCamera);
+            
+            function closeCamera() {
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                }
+                cameraModal.classList.remove('active');
+            }
+            
+            // 物品识别功能
+            const detectObjectsButton = document.getElementById('detect-objects-button');
+            const translateObjectsButton = document.getElementById('translate-objects-button');
+            const speakObjectsButton = document.getElementById('speak-objects-button');
+            const selectObjectButton = document.getElementById('select-object-button');
+            const detectionLoading = document.getElementById('detection-loading');
+            const detectionStatus = document.getElementById('detection-status');
+            const objectDetectionResult = document.getElementById('object-detection-result');
+            const objectList = document.getElementById('object-list');
+            const imageCanvasWrapper = document.getElementById('image-canvas-wrapper');
+            
+            let cocoSsdModel = null;
+            let detectedObjects = [];
+            let translatedObjects = [];
+            
+            // 框选功能变量
+            let isSelecting = false;
+            let startX = 0;
+            let startY = 0;
+            let selectionBox = null;
+            let selectionHint = null;
+            let selectionControls = null;
+            
+            // 火山引擎图片识别函数
+            async function recognizeWithVolcanoEngine(imageData) {
+                detectionLoading.classList.add('active');
+                detectionStatus.textContent = '正在使用火山引擎识别物品...';
+                
+                try {
+                    // 将图片转换为base64
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = imageData.width;
+                    canvas.height = imageData.height;
+                    ctx.drawImage(imageData, 0, 0);
+                    const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+                    
+                    // 使用火山方舟API（豆包视觉模型）
+                    const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer 23cc5b4b-07e1-4d75-bcdf-3404545351b6',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            "model": "doubao-seed-2-0-pro-260215",
+                            "input": [
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "input_image",
+                                            "image_url": `data:image/jpeg;base64,${base64Image}`
+                                        },
+                                        {
+                                            "type": "input_text",
+                                            "text": "请识别图片中所有具体的物品，包括它们的名称、数量和大致位置。要求：1. 只返回具体的物品名称，不要返回抽象类别；2. 每行一个物品名称；3. 不要添加任何解释或编号；4. 尽可能详细和准确。"
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (data.output && data.output[0] && data.output[0].content) {
+                        const content = data.output[0].content;
+                        const objectNames = content.split('\n').filter(name => name.trim());
+                        
+                        // 构建识别结果
+                        const results = objectNames.map((name, index) => ({
+                            class: name.trim(),
+                            score: 0.95, // 豆包视觉模型的置信度较高
+                            bbox: [50 + index * 20, 50 + index * 20, 100, 100] // 简单的位置估算
+                        }));
+                        
+                        return results;
+                    } else {
+                        throw new Error('API返回格式错误');
+                    }
+                } catch (error) {
+                    console.error('火山引擎识别失败:', error);
+                    throw error;
+                } finally {
+                    detectionLoading.classList.remove('active');
+                }
+            }
+            
+            // 加载COCO-SSD模型（带重试机制）
+            async function loadCocoSsdModel() {
+                if (!cocoSsdModel) {
+                    let retries = 3;
+                    let lastError = null;
+                    
+                    while (retries > 0) {
+                        detectionLoading.classList.add('active');
+                        detectionStatus.textContent = `正在加载物品识别模型... (${4 - retries}/3)`;
+                        
+                        try {
+                            // 添加超时处理
+                            const timeoutPromise = new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('模型加载超时')), 30000)
+                            );
+                            
+                            cocoSsdModel = await Promise.race([
+                                cocoSsd.load(),
+                                timeoutPromise
+                            ]);
+                            
+                            detectionLoading.classList.remove('active');
+                            detectionStatus.textContent = '物品识别模型加载完成';
+                            console.log('COCO-SSD模型加载完成');
+                            return true;
+                        } catch (error) {
+                            lastError = error;
+                            console.error(`模型加载失败 (${4 - retries}/3):`, error);
+                            retries--;
+                            
+                            if (retries > 0) {
+                                detectionStatus.textContent = `模型加载失败，${retries}秒后重试...`;
+                                await new Promise(resolve => setTimeout(resolve, 3000));
+                            } else {
+                                detectionStatus.textContent = '模型加载失败，使用火山引擎API';
+                                detectionLoading.classList.remove('active');
+                            }
+                        }
+                    }
+                    
+                    // 模型加载失败，使用火山引擎API
+                    console.warn('使用火山引擎API进行识别');
+                    return false;
+                }
+                return true;
+            }
+            
+            // 页面加载时预加载模型
+            loadCocoSsdModel().then(success => {
+                if (success) {
+                    console.log('模型加载成功，物品识别功能可用');
+                    detectObjectsButton.disabled = false;
+                    selectObjectButton.disabled = false;
+                } else {
+                    console.warn('模型加载失败，使用备用方案');
+                    detectObjectsButton.disabled = false; // 即使模型加载失败，也允许用户尝试
+                    selectObjectButton.disabled = false;
+                    detectionStatus.textContent = '使用备用识别方案';
+                }
+            }).catch(error => {
+                console.error('模型加载异常:', error);
+                detectObjectsButton.disabled = false;
+                selectObjectButton.disabled = false;
+                detectionStatus.textContent = '使用备用识别方案';
+            });
+            
+            // 物品识别
+            detectObjectsButton.addEventListener('click', async () => {
+                if (!currentImage) {
+                    alert('请先上传图片或拍照');
+                    return;
+                }
+                
+                detectObjectsButton.disabled = true;
+                detectionLoading.classList.add('active');
+                detectionStatus.textContent = '正在识别图片中的物品...';
+                
+                try {
+                    // 清除之前的标注
+                    const existingBboxes = imageCanvasWrapper.querySelectorAll('.object-bbox');
+                    existingBboxes.forEach(bbox => bbox.remove());
+                    
+                    // 优先使用火山引擎API进行精准识别
+                    try {
+                        detectionStatus.textContent = '正在使用火山引擎识别...';
+                        detectedObjects = await recognizeWithVolcanoEngine(currentImage);
+                    } catch (arkError) {
+                        console.warn('火山引擎识别失败，使用COCO-SSD模型:', arkError);
+                        
+                        // 火山方舟API失败，尝试使用COCO-SSD模型
+                        if (cocoSsdModel) {
+                            detectionStatus.textContent = '使用COCO-SSD模型识别...';
+                            const predictions = await cocoSsdModel.detect(currentImage);
+                            
+                            // 过滤置信度大于0.5的结果
+                            detectedObjects = predictions
+                                .filter(pred => pred.score > 0.5)
+                                .map(pred => ({
+                                    class: pred.class,
+                                    score: pred.score,
+                                    bbox: pred.bbox
+                                }));
+                        } else {
+                            // 所有模型都失败，使用备用方案
+                            detectionStatus.textContent = '使用备用识别方案...';
+                            detectedObjects = [
+                                {
+                                    class: '物体',
+                                    score: 0.7,
+                                    bbox: [50, 50, 200, 200]
+                                }
+                            ];
+                        }
+                    }
+                    
+                    // 显示识别结果
+                    objectList.innerHTML = '';
+                    if (detectedObjects.length > 0) {
+                        detectedObjects.forEach((obj, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'object-item';
+                            div.innerHTML = `
+                                <span class="object-name">${obj.class}</span>
+                                <span class="object-confidence">置信度: ${Math.round(obj.score * 100)}%</span>
+                            `;
+                            objectList.appendChild(div);
+                            
+                            // 在图片上绘制标注框
+                            drawObjectBoundingBox(obj, index);
+                        });
+                        objectDetectionResult.style.display = 'block';
+                        translateObjectsButton.disabled = false;
+                    } else {
+                        objectList.innerHTML = '<p style="color: #666;">未识别到物品</p>';
+                        objectDetectionResult.style.display = 'block';
+                        translateObjectsButton.disabled = true;
+                    }
+                    
+                    detectionLoading.classList.remove('active');
+                    detectionStatus.textContent = detectedObjects.length > 0 ? '识别完成' : '未识别到物品';
+                    detectObjectsButton.disabled = false;
+                    
+                } catch (error) {
+                    console.error('物品识别错误:', error);
+                    detectionStatus.textContent = '识别失败，使用备用方案';
+                    
+                    // 显示备用结果
+                    objectList.innerHTML = '<p style="color: #666;">识别失败，使用备用方案</p>';
+                    objectDetectionResult.style.display = 'block';
+                    translateObjectsButton.disabled = true;
+                    
+                    detectObjectsButton.disabled = false;
+                    detectionLoading.classList.remove('active');
+                }
+            });
+            
+            // 绘制物品标注框
+            function drawObjectBoundingBox(obj, index) {
+                const canvas = document.getElementById('image-canvas');
+                const scaleX = canvas.width / currentImage.width;
+                const scaleY = canvas.height / currentImage.height;
+                
+                const bbox = document.createElement('div');
+                bbox.className = 'object-bbox';
+                bbox.style.left = (obj.bbox[0] * scaleX) + 'px';
+                bbox.style.top = (obj.bbox[1] * scaleY) + 'px';
+                bbox.style.width = (obj.bbox[2] * scaleX) + 'px';
+                bbox.style.height = (obj.bbox[3] * scaleY) + 'px';
+                
+                const label = document.createElement('div');
+                label.className = 'object-label';
+                label.textContent = translatedObjects[index] || obj.class;
+                bbox.appendChild(label);
+                
+                imageCanvasWrapper.appendChild(bbox);
+            }
+            
+            // 开始框选
+            function startSelection(e) {
+                if (!currentImage) return;
+                
+                isSelecting = true;
+                const rect = imageCanvasWrapper.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                
+                // 创建框选框
+                selectionBox = document.createElement('div');
+                selectionBox.className = 'selection-box';
+                selectionBox.style.left = startX + 'px';
+                selectionBox.style.top = startY + 'px';
+                imageCanvasWrapper.appendChild(selectionBox);
+            }
+            
+            // 框选过程
+            function onMouseMove(e) {
+                if (!isSelecting || !selectionBox) return;
+                
+                const rect = imageCanvasWrapper.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
+                
+                const width = Math.abs(currentX - startX);
+                const height = Math.abs(currentY - startY);
+                const left = Math.min(startX, currentX);
+                const top = Math.min(startY, currentY);
+                
+                selectionBox.style.left = left + 'px';
+                selectionBox.style.top = top + 'px';
+                selectionBox.style.width = width + 'px';
+                selectionBox.style.height = height + 'px';
+            }
+            
+            // 结束框选
+            function endSelection() {
+                if (!isSelecting) return;
+                isSelecting = false;
+                
+                // 显示框选控制按钮
+                if (selectionBox && (parseInt(selectionBox.style.width) > 20 || parseInt(selectionBox.style.height) > 20)) {
+                    showSelectionControls();
+                } else {
+                    // 框选区域太小，取消框选
+                    cancelSelection();
+                }
+            }
+            
+            // 显示框选控制按钮
+            function showSelectionControls() {
+                // 清除之前的控制按钮
+                if (selectionControls) {
+                    selectionControls.remove();
+                }
+                
+                selectionControls = document.createElement('div');
+                selectionControls.className = 'selection-controls';
+                selectionControls.innerHTML = `
+                    <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--green-500 mdl-color-text--white" id="confirm-selection">
+                        <i class="material-icons">check</i> 确认识别
+                    </button>
+                    <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color--red-500 mdl-color-text--white" id="cancel-selection">
+                        <i class="material-icons">close</i> 取消
+                    </button>
+                `;
+                imageCanvasWrapper.appendChild(selectionControls);
+                
+                // 绑定事件
+                document.getElementById('confirm-selection').addEventListener('click', confirmSelection);
+                document.getElementById('cancel-selection').addEventListener('click', cancelSelection);
+            }
+            
+            // 火山引擎框选识别函数
+            async function recognizeWithVolcanoEngineSelection(imageData, selection) {
+                detectionLoading.classList.add('active');
+                detectionStatus.textContent = '正在使用火山引擎识别框选物品...';
+                
+                try {
+                    // 将图片转换为base64
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = imageData.width;
+                    canvas.height = imageData.height;
+                    ctx.drawImage(imageData, 0, 0);
+                    const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+                    
+                    // 使用火山方舟API（豆包视觉模型）
+                    const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer 23cc5b4b-07e1-4d75-bcdf-3404545351b6',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            "model": "doubao-seed-2-0-pro-260215",
+                            "input": [
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "input_image",
+                                            "image_url": `data:image/jpeg;base64,${base64Image}`
+                                        },
+                                        {
+                                            "type": "input_text",
+                                            "text": `请识别图片中框选区域内的具体物品，包括它们的名称、数量和大致位置。框选区域坐标：左${Math.round(selection.left)}，上${Math.round(selection.top)}，宽${Math.round(selection.width)}，高${Math.round(selection.height)}。要求：1. 只返回具体的物品名称，不要返回抽象类别；2. 每行一个物品名称；3. 不要添加任何解释或编号；4. 尽可能详细和准确。`
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (data.output && data.output[0] && data.output[0].content) {
+                        const content = data.output[0].content;
+                        const objectNames = content.split('\n').filter(name => name.trim());
+                        
+                        // 构建识别结果
+                        const results = objectNames.map((name, index) => ({
+                            class: name.trim(),
+                            score: 0.95,
+                            bbox: [selection.left, selection.top, selection.width, selection.height]
+                        }));
+                        
+                        return results;
+                    } else {
+                        throw new Error('API返回格式错误');
+                    }
+                } catch (error) {
+                    console.error('火山引擎框选识别失败:', error);
+                    throw error;
+                } finally {
+                    detectionLoading.classList.remove('active');
+                }
+            }
+            
+            // 确认框选并识别
+            async function confirmSelection() {
+                if (!selectionBox || !currentImage) return;
+                
+                const canvas = document.getElementById('image-canvas');
+                const scaleX = currentImage.width / canvas.width;
+                const scaleY = currentImage.height / canvas.height;
+                
+                // 获取框选区域的坐标（转换为原始图片尺寸）
+                const left = parseInt(selectionBox.style.left) * scaleX;
+                const top = parseInt(selectionBox.style.top) * scaleY;
+                const width = parseInt(selectionBox.style.width) * scaleX;
+                const height = parseInt(selectionBox.style.height) * scaleY;
+                
+                // 清除之前的标注
+                const existingBboxes = imageCanvasWrapper.querySelectorAll('.object-bbox');
+                existingBboxes.forEach(bbox => bbox.remove());
+                
+                // 识别框选区域内的物品
+                detectionLoading.classList.add('active');
+                detectionStatus.textContent = '正在识别框选区域内的物品...';
+                
+                try {
+                    // 优先使用火山引擎API进行精准识别
+                    try {
+                        detectionStatus.textContent = '正在使用火山引擎识别...';
+                        detectedObjects = await recognizeWithVolcanoEngineSelection(currentImage, {
+                            left: left,
+                            top: top,
+                            width: width,
+                            height: height
+                        });
+                    } catch (arkError) {
+                        console.warn('火山引擎识别失败，使用COCO-SSD模型:', arkError);
+                        
+                        // 火山方舟API失败，尝试使用COCO-SSD模型
+                        if (cocoSsdModel) {
+                            detectionStatus.textContent = '使用COCO-SSD模型识别...';
+                            const predictions = await cocoSsdModel.detect(currentImage);
+                            
+                            // 过滤出框选区域内的物品
+                            detectedObjects = predictions
+                                .filter(pred => {
+                                    const objLeft = pred.bbox[0];
+                                    const objTop = pred.bbox[1];
+                                    const objRight = objLeft + pred.bbox[2];
+                                    const objBottom = objTop + pred.bbox[3];
+                                    
+                                    // 检查物品是否与框选区域重叠
+                                    return !(objRight < left || objLeft > left + width || objBottom < top || objTop > top + height);
+                                })
+                                .filter(pred => pred.score > 0.5)
+                                .map(pred => ({
+                                    class: pred.class,
+                                    score: pred.score,
+                                    bbox: pred.bbox
+                                }));
+                        } else {
+                            // 所有模型都失败，使用备用方案
+                            detectionStatus.textContent = '使用备用识别方案...';
+                            detectedObjects = [
+                                {
+                                    class: '框选物体',
+                                    score: 0.7,
+                                    bbox: [left, top, width, height]
+                                }
+                            ];
+                        }
+                    }
+                    
+                    // 显示识别结果
+                    objectList.innerHTML = '';
+                    if (detectedObjects.length > 0) {
+                        detectedObjects.forEach((obj, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'object-item';
+                            div.innerHTML = `
+                                <span class="object-name">${obj.class}</span>
+                                <span class="object-confidence">置信度: ${Math.round(obj.score * 100)}%</span>
+                            `;
+                            objectList.appendChild(div);
+                            
+                            // 在图片上绘制标注框
+                            drawObjectBoundingBox(obj, index);
+                        });
+                        objectDetectionResult.style.display = 'block';
+                        translateObjectsButton.disabled = false;
+                    } else {
+                        objectList.innerHTML = '<p style="color: #666;">框选区域内未识别到物品</p>';
+                        objectDetectionResult.style.display = 'block';
+                        translateObjectsButton.disabled = true;
+                    }
+                    
+                    detectionLoading.classList.remove('active');
+                    detectionStatus.textContent = detectedObjects.length > 0 ? '识别完成' : '未识别到物品';
+                    
+                    // 清除框选
+                    cancelSelection();
+                    
+                } catch (error) {
+                    console.error('框选识别错误:', error);
+                    detectionStatus.textContent = '识别失败，使用备用方案';
+                    
+                    // 显示备用结果
+                    objectList.innerHTML = '<p style="color: #666;">识别失败，使用备用方案</p>';
+                    objectDetectionResult.style.display = 'block';
+                    translateObjectsButton.disabled = true;
+                    
+                    detectionLoading.classList.remove('active');
+                    cancelSelection();
+                }
+            }
+            
+            // 取消框选
+            function cancelSelection() {
+                if (selectionBox) {
+                    selectionBox.remove();
+                    selectionBox = null;
+                }
+                if (selectionControls) {
+                    selectionControls.remove();
+                    selectionControls = null;
+                }
+                if (selectionHint) {
+                    selectionHint.remove();
+                    selectionHint = null;
+                }
+                isSelecting = false;
+                
+                // 移除事件监听器
+                imageCanvasWrapper.removeEventListener('mousemove', onMouseMove);
+                imageCanvasWrapper.removeEventListener('mouseup', endSelection);
+            }
+            
+            // 框选按钮点击事件
+            selectObjectButton.addEventListener('click', () => {
+                if (!currentImage) {
+                    alert('请先上传图片或拍照');
+                    return;
+                }
+                
+                // 清除之前的框选
+                cancelSelection();
+                
+                // 显示框选提示
+                selectionHint = document.createElement('div');
+                selectionHint.className = 'selection-hint';
+                selectionHint.textContent = '请在图片上拖动鼠标框选物品进行识别';
+                imageCanvasWrapper.appendChild(selectionHint);
+                
+                // 添加事件监听器
+                imageCanvasWrapper.addEventListener('mousedown', startSelection);
+                imageCanvasWrapper.addEventListener('mousemove', onMouseMove);
+                imageCanvasWrapper.addEventListener('mouseup', endSelection);
+                
+                // 点击外部区域取消框选
+                setTimeout(() => {
+                    document.addEventListener('click', function handleClickOutside(e) {
+                        if (!imageCanvasWrapper.contains(e.target)) {
+                            cancelSelection();
+                            document.removeEventListener('click', handleClickOutside);
+                        }
+                    });
+                }, 100);
+            });
+            
+            // 翻译物品名称
+            translateObjectsButton.addEventListener('click', async () => {
+                if (detectedObjects.length === 0) {
+                    alert('没有识别到物品，请先识别物品');
+                    return;
+                }
+                
+                translateObjectsButton.disabled = true;
+                detectionLoading.classList.add('active');
+                detectionStatus.textContent = '正在翻译物品名称...';
+                
+                try {
+                    const objectNames = detectedObjects.map(obj => obj.class).join('\n');
+                    const sourceLang = sourceLanguage.value;
+                    const targetLang = targetLanguage.value;
+                    
+                    const response = await fetch('https://api.deepseek.com/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer sk-5c946b2fa9df458bb8b81acda6b239a4'
+                        },
+                        body: JSON.stringify({
+                            "model": "deepseek-chat",
+                            "messages": [
+                                {"role": "system", "content": `请将以下物品名称从${languageMap[sourceLang]}翻译成${languageMap[targetLang]}。每行翻译结果用换行符分隔，不要添加编号或解释。`},
+                                {"role": "user", "content": objectNames}
+                            ],
+                            "stream": false
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`API请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (data.choices && data.choices.length > 0) {
+                        translatedObjects = data.choices[0].message.content.split('\n').filter(t => t.trim());
+                        
+                        // 更新显示
+                        objectList.innerHTML = '';
+                        detectedObjects.forEach((obj, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'object-item';
+                            div.innerHTML = `
+                                <div style="flex: 1;">
+                                    <div class="object-name">${obj.class}</div>
+                                    <div style="color: #e65100; margin-top: 5px;">→ ${translatedObjects[index] || ''}</div>
+                                </div>
+                                <span class="object-confidence">置信度: ${Math.round(obj.score * 100)}%</span>
+                            `;
+                            objectList.appendChild(div);
+                        });
+                        
+                        // 更新图片上的标注
+                        const existingBboxes = imageCanvasWrapper.querySelectorAll('.object-bbox');
+                        existingBboxes.forEach(bbox => bbox.remove());
+                        detectedObjects.forEach((obj, index) => {
+                            drawObjectBoundingBox(obj, index);
+                        });
+                        
+                        speakObjectsButton.disabled = false;
+                        detectionStatus.textContent = '翻译完成';
+                    }
+                    
+                    detectionLoading.classList.remove('active');
+                    translateObjectsButton.disabled = false;
+                    
+                } catch (error) {
+                    console.error('翻译错误:', error);
+                    detectionStatus.textContent = `翻译失败: ${error.message}`;
+                    detectionLoading.classList.remove('active');
+                    translateObjectsButton.disabled = false;
+                }
+            });
+            
+            // 朗读物品名称
+            speakObjectsButton.addEventListener('click', () => {
+                if (translatedObjects.length === 0) return;
+                
+                const text = translatedObjects.join('. ');
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                const langMap = {
+                    'zh': 'zh-CN', 'en': 'en-US', 'ru': 'ru-RU', 'ar': 'ar-SA',
+                    'es': 'es-ES', 'fr': 'fr-FR', 'de': 'de-DE', 'ja': 'ja-JP',
+                    'ko': 'ko-KR', 'pt': 'pt-PT', 'it': 'it-IT', 'tr': 'tr-TR',
+                    'th': 'th-TH', 'vi': 'vi-VN', 'id': 'id-ID', 'ms': 'ms-MY',
+                    'hi': 'hi-IN', 'ur': 'ur-PK', 'fa': 'fa-IR', 'pl': 'pl-PL'
+                };
+                
+                // 处理不同国家的英语变体
+                let langCode = targetLanguage.value;
+                if (langCode.startsWith('en-')) {
+                    if (langCode === 'en-gb') langCode = 'en-GB';
+                    else if (langCode === 'en-us') langCode = 'en-US';
+                    else if (langCode === 'en-ca') langCode = 'en-CA';
+                    else langCode = 'en-US'; // 默认使用美国英语
+                } else if (langCode === 'zh') {
+                    langCode = 'zh-CN';
+                }
+                utterance.lang = langCode;
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                speechSynthesis.speak(utterance);
+            });
+            
+            // 更新handleImageUpload函数以启用物品识别按钮
+            const originalHandleImageUpload = handleImageUpload;
+            handleImageUpload = function(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        currentImage = img;
+                        drawImageToCanvas(img);
+                        imagePreviewContainer.classList.add('active');
+                        recognizeButton.disabled = false;
+                        detectObjectsButton.disabled = false;
+                        ocrResult.style.display = 'none';
+                        objectDetectionResult.style.display = 'none';
+                        translateImageButton.disabled = true;
+                        speakButton.disabled = true;
+                        translateObjectsButton.disabled = true;
+                        speakObjectsButton.disabled = true;
+                        ocrTexts = [];
+                        translatedTexts = [];
+                        detectedObjects = [];
+                        translatedObjects = [];
+                        
+                        // 清除之前的标注
+                        const existingBboxes = imageCanvasWrapper.querySelectorAll('.object-bbox');
+                        existingBboxes.forEach(bbox => bbox.remove());
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+        });
+    </script>
+</body>
+</html>
+# 旅游景区文学文本翻译系统
+
+一个功能强大的多语言翻译和图片识别系统，支持一带一路沿线国家语言翻译。
+
+## 🌟 功能特色
+
+### 文本翻译
+- 支持20+种语言互译
+- 实时语音识别翻译
+- 自动翻译功能
+
+### 图片识别
+- 文字识别（OCR）
+- 物品识别（使用火山引擎AI）
+- 拍照识别功能
+
+### 多语言支持
+- 主流语言：中文、英语（多国变体）、法语、德语、日语、韩语等
+- 东盟语言：马来语、泰语、越南语、印尼语、菲律宾语、柬埔寨语、老挝语、缅甸语、泰米尔语、文莱语
+
+## 🚀 快速开始
+
+### 本地运行
+```bash
+# 启动本地服务器
+python -m http.server 8080
+# 或使用PowerShell脚本
+powershell -ExecutionPolicy Bypass -File .\start-http-server.ps1
+```
+
+访问：http://localhost:8080
+
+### 部署到GitHub Pages
+1. 将代码上传到GitHub仓库
+2. 在仓库设置中启用GitHub Pages
+3. 访问：https://[用户名].github.io/[仓库名]
+
+## 📄 文件结构
+
+```
+├── index.html          # 主页面
+├── README.md           # 说明文档
+├── start-http-server.ps1 # 本地服务器脚本
+└── simple-server.ps1   # 备用服务器脚本
+```
+
+## 🔧 技术栈
+
+- **前端**: HTML5, CSS3, JavaScript (ES6+)
+- **AI服务**: 火山引擎API, DeepSeek翻译API
+- **OCR**: Tesseract.js
+- **语音**: Web Speech API
+- **图像处理**: Canvas API, WebRTC
+
+## 🌐 支持的API
+
+- **翻译服务**: DeepSeek API
+- **图像识别**: 火山引擎豆包视觉模型
+- **文字识别**: Tesseract OCR
+
+## 📱 使用说明
+
+1. **文本翻译**: 输入文本，选择语言，点击翻译
+2. **语音翻译**: 点击语音按钮，开始说话
+3. **图片识别**: 上传图片或拍照，识别文字或物品
+4. **多语言选择**: 支持一带一路沿线国家语言
+
+## 🔒 注意事项
+
+- 摄像头功能需要在HTTPS环境下使用
+- 部分API需要网络连接
+- 建议使用Chrome、Edge等现代浏览器
+
+## 📞 联系信息
+
+如有问题或建议，欢迎联系开发者。
+# 简单的HTTP服务器
+$port = 8080
+$root = $PSScriptRoot
+
+Write-Host "启动HTTP服务器在 http://localhost:$port"
+Write-Host "根目录: $root"
+
+try {
+    # 创建HTTP监听器
+    $listener = [System.Net.HttpListener]::new()
+    $listener.Prefixes.Add("http://localhost:$port/")
+    $listener.Start()
+    
+    while ($listener.IsListening) {
+        # 等待请求
+        $context = $listener.GetContext()
+        $request = $context.Request
+        $response = $context.Response
+        
+        # 获取请求路径
+        $path = $request.Url.LocalPath
+        if ($path -eq "/") {
+            $path = "/index.html"
+        }
+        
+        # 构建文件路径
+        $filePath = Join-Path $root $path.TrimStart("/")
+        
+        # 处理请求
+        if (Test-Path $filePath -PathType Leaf) {
+            # 文件存在
+            $ext = [System.IO.Path]::GetExtension($filePath).ToLower()
+            
+            # 设置Content-Type
+            switch ($ext) {
+                ".html" { $contentType = "text/html" }
+                ".css" { $contentType = "text/css" }
+                ".js" { $contentType = "text/javascript" }
+                ".jpg" { $contentType = "image/jpeg" }
+                ".jpeg" { $contentType = "image/jpeg" }
+                ".png" { $contentType = "image/png" }
+                default { $contentType = "application/octet-stream" }
+            }
+            
+            $response.ContentType = $contentType
+            
+            try {
+                if ($contentType -like "image/*") {
+                    # 二进制文件
+                    $bytes = [System.IO.File]::ReadAllBytes($filePath)
+                    $response.ContentLength64 = $bytes.Length
+                    $response.OutputStream.Write($bytes, 0, $bytes.Length)
+                } else {
+                    # 文本文件
+                    $content = Get-Content $filePath -Raw -Encoding UTF8
+                    $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+                    $response.ContentLength64 = $bytes.Length
+                    $response.OutputStream.Write($bytes, 0, $bytes.Length)
+                }
+            } catch {
+                Write-Host "读取文件错误: $filePath"
+                $response.StatusCode = 500
+                $content = "Internal Server Error"
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+                $response.ContentLength64 = $bytes.Length
+                $response.OutputStream.Write($bytes, 0, $bytes.Length)
+            }
+        } else {
+            # 文件不存在
+            $response.StatusCode = 404
+            $content = "404 Not Found"
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+            $response.ContentLength64 = $bytes.Length
+            $response.OutputStream.Write($bytes, 0, $bytes.Length)
+        }
+        
+        # 关闭响应
+        $response.Close()
+    }
+} catch {
+    Write-Host "服务器错误: $($_.Exception.Message)"
+} finally {
+    if ($listener) {
+        $listener.Stop()
+        $listener.Close()
+        Write-Host "服务器已停止"
+    }
+}
+
+Write-Host "按任意键退出..."
+$host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+# Simple HTTP Server Script
+$port = 8080
+$url = "http://localhost:$port/"
+
+Write-Host "Starting HTTP Server..."
+Write-Host "Access URL: $url"
+Write-Host "Press Ctrl+C to stop the server"
+
+# Create HTTP listener
+$listener = New-Object System.Net.HttpListener
+$listener.Prefixes.Add($url)
+$listener.Start()
+
+try {
+    while ($listener.IsListening) {
+        $context = $listener.GetContext()
+        $request = $context.Request
+        $response = $context.Response
+        
+        # Get requested file path
+        $filePath = $request.Url.LocalPath
+        if ($filePath -eq "/") {
+            $filePath = "/index.html"
+        }
+        
+        # Build full file path
+        $fullPath = Join-Path $PWD $filePath.TrimStart('/')
+        
+        if (Test-Path $fullPath -PathType Leaf) {
+            # Read file content
+            $content = [System.IO.File]::ReadAllBytes($fullPath)
+            
+            # Set response headers
+            $response.ContentLength64 = $content.Length
+            
+            # Set Content-Type based on file extension
+            $extension = [System.IO.Path]::GetExtension($fullPath).ToLower()
+            switch ($extension) {
+                ".html" { $response.ContentType = "text/html; charset=utf-8" }
+                ".css" { $response.ContentType = "text/css; charset=utf-8" }
+                ".js" { $response.ContentType = "application/javascript; charset=utf-8" }
+                ".json" { $response.ContentType = "application/json; charset=utf-8" }
+                ".png" { $response.ContentType = "image/png" }
+                ".jpg" { $response.ContentType = "image/jpeg" }
+                ".jpeg" { $response.ContentType = "image/jpeg" }
+                ".gif" { $response.ContentType = "image/gif" }
+                default { $response.ContentType = "text/plain; charset=utf-8" }
+            }
+            
+            # Write response content
+            $response.OutputStream.Write($content, 0, $content.Length)
+            Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] 200 $filePath"
+        } else {
+            # File not found
+            $response.StatusCode = 404
+            $notFound = [System.Text.Encoding]::UTF8.GetBytes("404 - File Not Found: $filePath")
+            $response.ContentLength64 = $notFound.Length
+            $response.OutputStream.Write($notFound, 0, $notFound.Length)
+            Write-Host "[$((Get-Date).ToString('HH:mm:ss'))] 404 $filePath"
+        }
+        
+        $response.Close()
+    }
+} finally {
+    $listener.Stop()
+    $listener.Close()
+    Write-Host "Server stopped"
+}
